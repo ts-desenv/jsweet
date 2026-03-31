@@ -30,6 +30,7 @@ import java.io.PrintWriter;
 import java.io.UncheckedIOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -78,14 +79,15 @@ import org.jsweet.transpiler.util.SourceMap.Entry;
 import org.jsweet.transpiler.util.Util;
 
 import com.google.debugging.sourcemap.FilePosition;
-import com.google.debugging.sourcemap.OriginalMapping;
 import com.google.debugging.sourcemap.SourceMapConsumerFactory;
 import com.google.debugging.sourcemap.SourceMapFormat;
 import com.google.debugging.sourcemap.SourceMapGenerator;
 import com.google.debugging.sourcemap.SourceMapGeneratorFactory;
 import com.google.debugging.sourcemap.SourceMapGeneratorV3;
 import com.google.debugging.sourcemap.SourceMapping;
+import com.google.debugging.sourcemap.proto.Mapping.OriginalMapping;
 import com.google.gson.Gson;
+
 import standalone.com.sun.source.tree.CompilationUnitTree;
 import standalone.com.sun.source.tree.Tree;
 
@@ -132,6 +134,8 @@ public class JSweetTranspiler implements JSweetOptions, AutoCloseable {
      * may lead to performance issues - could be fixed if necessary).
      */
     public static final String TSC_VERSION = "5.2";
+    
+    public static final String TMP_WORKING_DIR_NAME = ".jsweet";
 
     static {
         if (!SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_1_8)) {
@@ -214,6 +218,7 @@ public class JSweetTranspiler implements JSweetOptions, AutoCloseable {
     private boolean ignoreTypeScriptErrors = false;
     private boolean ignoreJavaErrors = false;
     private boolean forceJavaRuntime = false;
+    private boolean isUsingJavaRuntime = false;
     private File javaRuntimeJ4TsJs = null;
     private File headerFile = null;
     private boolean debugMode = false;
@@ -231,7 +236,7 @@ public class JSweetTranspiler implements JSweetOptions, AutoCloseable {
 
     private ArrayList<String> adapters = new ArrayList<>();
     private File configurationFile;
-
+    
     private TypeScript2JavaScriptTranspiler ts2jsTranspiler = new TypeScript2JavaScriptWithTscTranspiler();
 
     /**
@@ -245,6 +250,11 @@ public class JSweetTranspiler implements JSweetOptions, AutoCloseable {
         forceJavaRuntime = true;
         javaRuntimeJ4TsJs = pathToJ4TsJs;
     }
+    
+    public void setUsingJavaRuntime(boolean usingJavaRuntime) {
+		forceJavaRuntime = true;
+		isUsingJavaRuntime = usingJavaRuntime;
+	}
 
     @Override
     public String toString() {
@@ -403,13 +413,13 @@ public class JSweetTranspiler implements JSweetOptions, AutoCloseable {
      * Reads configuration from current configuration file.
      */
     private void readConfiguration() {
-        File confFile = configurationFile == null ? new File(baseDirectory, JSweetConfig.CONFIGURATION_FILE_NAME)
-                : configurationFile;
+        File confFile = new File(baseDirectory, JSweetConfig.CONFIGURATION_FILE_NAME);
         if (confFile.exists()) {
             try {
                 logger.info("configuration file found: " + confFile);
                 @SuppressWarnings("unchecked")
-                Map<String, Object> fromJson = new Gson().fromJson(FileUtils.readFileToString(confFile), Map.class);
+                String jsonContent = FileUtils.readFileToString(confFile, StandardCharsets.UTF_8);
+                Map<String, Object> fromJson = new Gson().fromJson(jsonContent, Map.class);
                 configuration = fromJson;
                 logger.debug("configuration: " + configuration);
                 applyConfiguration();

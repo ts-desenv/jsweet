@@ -953,9 +953,23 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
             print("namespace ").print(rootRelativePackageName).print(" {").startIndent().println();
         }
 
-        for (ImportTree def : compilationUnit.getImports()) {
-            print(def);
-        }
+		for (ImportTree def : compilationUnit.getImports()) {
+
+			print(def);
+
+			/*
+			 * Correção para Java 21
+			 */
+//			String qualified = def.getQualifiedIdentifier().toString();
+//
+//			if (qualified.startsWith("jakarta.persistence")) {
+//				qualified = qualified.replace("jakarta.persistence", "javax.persistence");
+//
+//				print("import " + qualified + ";");
+//			} else {
+//				print(def);
+//			}
+		}
 
         for (ClassTree def : util().getSortedClassDeclarations(compilationUnit.getTypeDecls(), compilationUnit)) {
             printIndent();
@@ -1588,10 +1602,10 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
             }
             print(classTree.getModifiers());
 
-            if (!isTopLevelScope() || context.useModules || context.moduleBundleMode || isAnonymousClass()
-                    || isInnerClass() || isLocalClass()) {
-                print("export ");
-            }
+         // FORCE EXPORT FOR TYPESCRIPT MODULE COMPATIBILITY
+            print("export ");
+            
+            
             if (context.isInterface(classTypeElement)) {
                 print("interface ");
                 getScope().interfaceScope = true;

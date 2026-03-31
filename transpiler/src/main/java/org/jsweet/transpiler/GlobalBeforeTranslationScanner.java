@@ -262,6 +262,7 @@ public class GlobalBeforeTranslationScanner extends AbstractTreeScanner {
     }
 
     public void process(List<CompilationUnitTree> compilationUnits) {
+    	
         for (CompilationUnitTree compilationUnit : compilationUnits) {
             scan(compilationUnit, trees());
         }
